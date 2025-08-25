@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <sys/select.h>
+#include <string.h>
 
 #define ALTURA 17
 #define LARGURA 28
@@ -102,25 +103,27 @@ void atualizar_logica() {
 }
 
 void desenhar_tela() {
-    printf("\033[2J\033[H");
+    char buffer_tela[(LARGURA + 1) * ALTURA + 1000];
+    char *ptr = buffer_tela;
 
-    for (int y = 0; y < ALTURA; y++) {
-        printf("%s\n", mapa[y]);
-    }
+    ptr += sprintf(ptr, "\033[2J\033[H");
 
+    // desenha o mapa, o pacman e as pílulas em um buffer, em seguida, imprime
     for (int y = 0; y < ALTURA; y++) {
-        for (int x = 0; x < LARGURA; x++) {
-            if (pilulas[y][x] == PILL_CHAR) {
-                printf("\033[%d;%dH%c", y+1, x+1, PILL_CHAR);
+        for (int x = 0; x < strlen(mapa[y]); x++) {
+            if (y == pacman.y && x == pacman.x) {
+                ptr += sprintf(ptr, "%c", PACMAN_CHAR);
+            } else if (pilulas[y][x] == PILL_CHAR) {
+                ptr += sprintf(ptr, "%c", PILL_CHAR);
+            } else {
+                ptr += sprintf(ptr, "%c", mapa[y][x]);
             }
         }
+        ptr += sprintf(ptr, "\n");
     }
+    ptr += sprintf(ptr, "Score: %d", score);
 
-    printf("\033[%d;%dH%c", pacman.y + 1, pacman.x + 1, PACMAN_CHAR);
-    
-    printf("\033[%d;%dH", ALTURA + 2, 1);
-    printf("Score: %d", score);
-
+    printf("%s", buffer_tela);
 
     fflush(stdout);
 }
