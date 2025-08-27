@@ -88,14 +88,23 @@ void processar_entrada() {
 }
 
 void atualizar_logica() {
+    // cálculo da movimentação futura
     int next_x = pacman.x + pacman.dx;
     int next_y = pacman.y + pacman.dy;
 
-    if (mapa[next_y][next_x] == EMPTY_CHAR) {
+    // movimentação e teleporte
+    if (pacman.x == 13 && pacman.y == 0 && pacman.dy == -1) {
+        pacman.y = 16;
+    }
+    else if (pacman.x == 13 && pacman.y == 16 && pacman.dy == 1) {
+        pacman.y = 0;
+    }
+    else if (mapa[next_y][next_x] == EMPTY_CHAR) {
         pacman.x = next_x;
         pacman.y = next_y;
     }
 
+    // captura das pílulas e score
     if (pilulas[pacman.y][pacman.x] == PILL_CHAR) {
         score += 1;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
