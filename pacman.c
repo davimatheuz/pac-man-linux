@@ -19,6 +19,7 @@
 typedef struct {
     int x, y;
     int dx, dy;
+    int next_dx, next_dy;
 } Pacman;
 
 typedef struct {
@@ -84,6 +85,7 @@ char getch() {
     return buf;
 }
 
+// mostra o cursor quando o jogo acaba e configura a posição correta para printar a entrada
 void mostrar_cursor() {
     printf("\033[?25h");
     printf("\033[%d;%dH", ALTURA + 2, 20);
@@ -98,11 +100,11 @@ void processar_entrada() {
     if (kbhit()) {
         char c = getch();
         switch (c) {
-            case 'w': pacman.dx = 0; pacman.dy = -1; break;
-            case 'a': pacman.dx = -1; pacman.dy = 0; break;
-            case 's': pacman.dx = 0; pacman.dy = 1; break;
-            case 'd': pacman.dx = 1; pacman.dy = 0; break;
-            case 'q': exit(0); break; // Saída limpa
+            case 'w': pacman.next_dx = 0; pacman.next_dy = -1; break;
+            case 'a': pacman.next_dx = -1; pacman.next_dy = 0; break;
+            case 's': pacman.next_dx = 0; pacman.next_dy = 1; break;
+            case 'd': pacman.next_dx = 1; pacman.next_dy = 0; break;
+            case 'q': exit(0); break;
         }
     }
 }
@@ -146,7 +148,6 @@ void atualizar_logica_fantasmas() {
         else if (ghosts[i].x == 13 && ghosts[i].y == 16 && ghosts[i].dy == 1) {
             ghosts[i].y = 0;
         }
-
         // Verifica, para cada uma das direções, a menor distância até o pacman
         for (int j = 0; j < 4; j++) {
             int dx_teste = direcoes[j][0];
@@ -189,29 +190,37 @@ void atualizar_logica() {
     if (game_over) return;
     atualizar_logica_fantasmas();
 
-    // cálculo da movimentação futura
-    int next_x = pacman.x + pacman.dx;
-    int next_y = pacman.y + pacman.dy;
+    int intencao_x = pacman.x + pacman.next_dx;
+    int intencao_y = pacman.y + pacman.next_dy;
 
-    // movimentação e teleporte
+    if ((pacman.next_dx != 0 || pacman.next_dy != 0) &&
+        (intencao_y >= 0 && intencao_y < ALTURA && intencao_x >= 0 && intencao_x < LARGURA) &&
+        mapa[intencao_y][intencao_x] == EMPTY_CHAR) {
+        
+        pacman.dx = pacman.next_dx;
+        pacman.dy = pacman.next_dy;
+    }
+
+    int proximo_x = pacman.x + pacman.dx;
+    int proximo_y = pacman.y + pacman.dy;
+
     if (pacman.x == 13 && pacman.y == 0 && pacman.dy == -1) {
         pacman.y = 16;
-    }
-    else if (pacman.x == 13 && pacman.y == 16 && pacman.dy == 1) {
+    } else if (pacman.x == 13 && pacman.y == 16 && pacman.dy == 1) {
         pacman.y = 0;
+    } else if (mapa[proximo_y][proximo_x] == EMPTY_CHAR) {
+        pacman.x = proximo_x;
+        pacman.y = proximo_y;
+    } else {
+        pacman.dx = 0;
+        pacman.dy = 0;
     }
-    else if (mapa[next_y][next_x] == EMPTY_CHAR) {
-        pacman.x = next_x;
-        pacman.y = next_y;
-    }
-
-    // captura das pílulas e score
+    
     if (pilulas[pacman.y][pacman.x] == PILL_CHAR) {
         score += 1;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
     }
 
-    // Verificação de colisão Pac-man vs. Fantasmas
     for (int i = 0; i < NUM_GHOSTS; i++) {
         if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
             game_over = 1;
@@ -270,6 +279,8 @@ void inicializar_jogo() {
     pacman.y = 13;
     pacman.dx = 0;
     pacman.dy = 0;
+    pacman.next_dx = 0;
+    pacman.next_dy = 0;
 
     score = 0;
     game_over = 0;
