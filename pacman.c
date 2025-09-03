@@ -15,6 +15,7 @@
 #define PILL_CHAR '*'
 #define EMPTY_CHAR ' '
 #define NUM_GHOSTS 2
+#define VIDAS_INICIAIS 4
 
 typedef struct {
     int x, y;
@@ -31,6 +32,7 @@ typedef struct {
 Pacman pacman;
 Ghost ghosts[NUM_GHOSTS];
 int score = 0;
+int lives = 0;
 int game_over = 0;
 
 char pilulas[ALTURA][LARGURA];
@@ -186,6 +188,23 @@ void atualizar_logica_fantasmas() {
     }
 }  
 
+void reset_positions() {
+    pacman.x = 13;
+    pacman.y = 13;
+    pacman.dx = 0;
+    pacman.dy = 0;
+    pacman.next_dx = 0;
+    pacman.next_dy = 0;
+
+    for (int i = 0; i < NUM_GHOSTS; i++) {
+        ghosts[i].x = 13;
+        ghosts[i].y = 7;
+        ghosts[i].dx = 0;
+        ghosts[i].dy = -1;
+        ghosts[i].isinbox = 1;
+    }
+}
+
 void atualizar_logica() {
     if (game_over) return;
     atualizar_logica_fantasmas();
@@ -217,13 +236,23 @@ void atualizar_logica() {
     }
     
     if (pilulas[pacman.y][pacman.x] == PILL_CHAR) {
-        score += 1;
+        score += 10;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
     }
 
     for (int i = 0; i < NUM_GHOSTS; i++) {
         if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
-            game_over = 1;
+            lives--;
+            usleep(1000000);
+
+            if (lives <= 0) {
+                game_over = 1;
+            }
+            else {
+                reset_positions();
+            }
+
+            break;
         }
     }
 }
@@ -259,7 +288,7 @@ void desenhar_tela() {
     }
 
     ptr += sprintf(ptr, "\033[%d;%dH", ALTURA + 2, 1);
-    ptr += sprintf(ptr, "Score: %d", score);
+    ptr += sprintf(ptr, "Score: %-5d   Lives: %d", score, lives);
 
     if (game_over) {
         ptr += sprintf(ptr, "\033[%d;%dH", ALTURA / 2 + 1, LARGURA / 2 - 4);
@@ -275,23 +304,11 @@ void inicializar_jogo() {
     printf("\033[?25l");
     atexit(mostrar_cursor);
 
-    pacman.x = 13;
-    pacman.y = 13;
-    pacman.dx = 0;
-    pacman.dy = 0;
-    pacman.next_dx = 0;
-    pacman.next_dy = 0;
-
+    lives = VIDAS_INICIAIS;
     score = 0;
     game_over = 0;
 
-    for (int i = 0; i < NUM_GHOSTS; i++) {
-        ghosts[i].x = 13;
-        ghosts[i].y = 7;
-        ghosts[i].dx = 0;
-        ghosts[i].dy = -1;
-        ghosts[i].isinbox = 1;
-    }
+    reset_positions();
 
     for (int y = 0; y < ALTURA; y++) {
         for (int x = 0; x < LARGURA; x++) {
