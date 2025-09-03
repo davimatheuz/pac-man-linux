@@ -16,6 +16,7 @@
 #define EMPTY_CHAR ' '
 #define NUM_GHOSTS 2
 #define VIDAS_INICIAIS 4
+#define LEVEL_SCORE 2380
 
 typedef struct {
     int x, y;
@@ -205,6 +206,23 @@ void reset_positions() {
     }
 }
 
+void preencher_pilulas() {
+    for (int y = 0; y < ALTURA; y++) {
+        for (int x = 0; x < LARGURA; x++) {
+            if (mapa[y][x] == ' ') {
+                pilulas[y][x] = PILL_CHAR;
+            } else {
+                pilulas[y][x] = EMPTY_CHAR;
+            }
+        }
+    }
+
+    pilulas[7][13] = EMPTY_CHAR;
+    pilulas[0][13] = EMPTY_CHAR;
+    pilulas[16][13] = EMPTY_CHAR;
+    pilulas[13][13] = EMPTY_CHAR;
+}
+
 void atualizar_logica() {
     if (game_over) return;
     atualizar_logica_fantasmas();
@@ -243,7 +261,7 @@ void atualizar_logica() {
     for (int i = 0; i < NUM_GHOSTS; i++) {
         if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
             lives--;
-            usleep(1000000);
+            usleep(2000000);
 
             if (lives <= 0) {
                 game_over = 1;
@@ -254,6 +272,12 @@ void atualizar_logica() {
 
             break;
         }
+    }
+
+    if (score >= LEVEL_SCORE && score % LEVEL_SCORE == 0) {
+        usleep(2000000);
+        reset_positions();
+        preencher_pilulas();
     }
 }
 
@@ -309,20 +333,7 @@ void inicializar_jogo() {
     game_over = 0;
 
     reset_positions();
-
-    for (int y = 0; y < ALTURA; y++) {
-        for (int x = 0; x < LARGURA; x++) {
-            if (mapa[y][x] == ' ') {
-                pilulas[y][x] = PILL_CHAR;
-            } else {
-                pilulas[y][x] = EMPTY_CHAR;
-            }
-        }
-    }
-    pilulas[7][13] = EMPTY_CHAR;
-    pilulas[0][13] = EMPTY_CHAR;
-    pilulas[16][13] = EMPTY_CHAR;
-    pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
+    preencher_pilulas();
 }
 
 int main() {
