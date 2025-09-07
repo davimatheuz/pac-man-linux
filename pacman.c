@@ -17,6 +17,9 @@
 #define NUM_GHOSTS 2
 #define VIDAS_INICIAIS 4
 #define LEVEL_SCORE 2380
+#define POWER_PILL_CHAR '$'
+#define FLEEING_GHOST_CHAR 'w'
+#define POWER_PILL_DURATION 40
 
 typedef struct {
     int x, y;
@@ -35,6 +38,7 @@ Ghost ghosts[NUM_GHOSTS];
 int score = 0;
 int lives = 0;
 int game_over = 0;
+int power_pill_timer = 0;
 
 char pilulas[ALTURA][LARGURA];
 const char *mapa[ALTURA] = {
@@ -131,7 +135,6 @@ void atualizar_logica_fantasmas() {
         }
 
         int melhor_dx = 0, melhor_dy = 0;
-        int menor_distancia = 9999;
 
         // Cima, esquerda, baixo, direita
         int direcoes[4][2] = {{0, -1}, {-1, 0}, {0, 1}, {1, 0}};
@@ -143,41 +146,65 @@ void atualizar_logica_fantasmas() {
             direcoes[3][0] = 0;  direcoes[3][1] = 1;  // Baixo
         }
 
-        // Travessia do túnel superior
-        if (ghosts[i].x == 13 && ghosts[i].y == 0 && ghosts[i].dy == -1) {
-            ghosts[i].y = 16;
-        }
-        // Travessia do túnel inferior
-        else if (ghosts[i].x == 13 && ghosts[i].y == 16 && ghosts[i].dy == 1) {
-            ghosts[i].y = 0;
-        }
-        // Verifica, para cada uma das direções, a menor distância até o pacman
-        for (int j = 0; j < 4; j++) {
-            int dx_teste = direcoes[j][0];
-            int dy_teste = direcoes[j][1];
+        if (power_pill_timer > 0 && !ghosts[i].isinbox) {
+            int maior_distancia = -1;
+            for (int j = 0; j < 4; j++) {
+                int dx_teste = direcoes[j][0];
+                int dy_teste = direcoes[j][1];
 
-            // Impede o fantasma de mudar a direção 180º
-            if (dx_teste == -ghosts[i].dx && dy_teste == -ghosts[i].dy) {
-                continue;
-            }
+                // Impede o fantasma de mudar a direção 180º
+                if (dx_teste == -ghosts[i].dx && dy_teste == -ghosts[i].dy) {
+                    continue;
+                }
 
-            int proximo_x = ghosts[i].x + dx_teste;
-            int proximo_y = ghosts[i].y + dy_teste;
+                int proximo_x = ghosts[i].x + dx_teste;
+                int proximo_y = ghosts[i].y + dy_teste;
 
-            if (!ghosts[i].isinbox && proximo_y == 7 && proximo_x == 13) {
-                continue;
-            }
+                // Impede o fantasma de reentrar na caixa
+                if (!ghosts[i].isinbox && proximo_y == 7 && proximo_x == 13) {
+                    continue;
+                }
 
-            // Atualiza a menor distância até o pacman
-            if (mapa[proximo_y][proximo_x] == EMPTY_CHAR) {
-                int distancia = calcular_distancia_manhattan(proximo_x, proximo_y, alvo_x, alvo_y);
-                if (distancia < menor_distancia) {
-                    menor_distancia = distancia;
-                    melhor_dx = dx_teste;
-                    melhor_dy = dy_teste;
+                if (mapa[proximo_y][proximo_x] == EMPTY_CHAR) {
+                    int distancia = calcular_distancia_manhattan(proximo_x, proximo_y, alvo_x, alvo_y);
+                    if (distancia > maior_distancia) {
+                        maior_distancia = distancia;
+                        melhor_dx = dx_teste;
+                        melhor_dy = dy_teste;
+                    }
                 }
             }
-        }
+        } else {
+            int menor_distancia = 9999;
+            // Verifica, para cada uma das direções, a menor distância até o pacman
+            for (int j = 0; j < 4; j++) {
+                int dx_teste = direcoes[j][0];
+                int dy_teste = direcoes[j][1];
+
+                // Impede o fantasma de mudar a direção 180º
+                if (dx_teste == -ghosts[i].dx && dy_teste == -ghosts[i].dy) {
+                    continue;
+                }
+
+                int proximo_x = ghosts[i].x + dx_teste;
+                int proximo_y = ghosts[i].y + dy_teste;
+
+                // Impede o fantasma de reentrar na caixa
+                if (!ghosts[i].isinbox && proximo_y == 7 && proximo_x == 13) {
+                    continue;
+                }
+
+                // Atualiza a menor distância até o pacman
+                if (mapa[proximo_y][proximo_x] == EMPTY_CHAR) {
+                    int distancia = calcular_distancia_manhattan(proximo_x, proximo_y, alvo_x, alvo_y);
+                    if (distancia < menor_distancia) {
+                        menor_distancia = distancia;
+                        melhor_dx = dx_teste;
+                        melhor_dy = dy_teste;
+                    }
+                }
+            }
+        }     
 
         if (melhor_dx != 0 || melhor_dy != 0) {
             ghosts[i].dx = melhor_dx;
@@ -186,6 +213,15 @@ void atualizar_logica_fantasmas() {
 
         ghosts[i].x += ghosts[i].dx;
         ghosts[i].y += ghosts[i].dy;
+
+        // Travessia do túnel superior
+        if (ghosts[i].x == 13 && ghosts[i].y == 0 && ghosts[i].dy == -1) {
+            ghosts[i].y = 16;
+        }
+        // Travessia do túnel inferior
+        else if (ghosts[i].x == 13 && ghosts[i].y == 16 && ghosts[i].dy == 1) {
+            ghosts[i].y = 0;
+        }
     }
 }  
 
@@ -217,6 +253,11 @@ void preencher_pilulas() {
         }
     }
 
+    pilulas[2][1] = POWER_PILL_CHAR;
+    pilulas[2][25] = POWER_PILL_CHAR;
+    pilulas[14][1] = POWER_PILL_CHAR;
+    pilulas[14][25] = POWER_PILL_CHAR;
+
     pilulas[7][13] = EMPTY_CHAR;
     pilulas[0][13] = EMPTY_CHAR;
     pilulas[16][13] = EMPTY_CHAR;
@@ -225,6 +266,11 @@ void preencher_pilulas() {
 
 void atualizar_logica() {
     if (game_over) return;
+
+    if (power_pill_timer > 0) {
+        power_pill_timer--;
+    }
+
     atualizar_logica_fantasmas();
 
     int intencao_x = pacman.x + pacman.next_dx;
@@ -256,20 +302,29 @@ void atualizar_logica() {
     if (pilulas[pacman.y][pacman.x] == PILL_CHAR) {
         score += 10;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
+    } else if (pilulas[pacman.y][pacman.x] == POWER_PILL_CHAR) {
+        score += 50;
+        pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
+        power_pill_timer = POWER_PILL_DURATION;
     }
 
     for (int i = 0; i < NUM_GHOSTS; i++) {
         if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
-            lives--;
-            usleep(2000000);
+            if (power_pill_timer > 0) {
+                score += 200;
+                ghosts[i].x = 13;
+                ghosts[i].y = 7;
+                ghosts[i].isinbox = 1;
+            } else {
+                lives--;
+                usleep(2000000);
 
-            if (lives <= 0) {
-                game_over = 1;
+                if (lives <= 0) {
+                    game_over = 1;
+                } else {
+                    reset_positions();
+                }
             }
-            else {
-                reset_positions();
-            }
-
             break;
         }
     }
@@ -297,13 +352,14 @@ void desenhar_tela() {
                 }
             }
 
+            char char_fantasma_atual = (power_pill_timer > 0) ? FLEEING_GHOST_CHAR : GHOST_CHAR;
 
             if (y == pacman.y && x == pacman.x) {
                 ptr += sprintf(ptr, "%c", PACMAN_CHAR);
             } else if (fantasma_aqui) {
-                ptr += sprintf(ptr, "%c", GHOST_CHAR);
-            } else if (pilulas[y][x] == PILL_CHAR) {
-                ptr += sprintf(ptr, "%c", PILL_CHAR);
+                ptr += sprintf(ptr, "%c", char_fantasma_atual);
+            } else if (pilulas[y][x] == PILL_CHAR || pilulas[y][x] == POWER_PILL_CHAR) {
+                ptr += sprintf(ptr, "%c", pilulas[y][x]); //se ocorrer um erro, ele está aqui, mudança de PILL_CHAR para pilulas[x][y]
             } else {
                 ptr += sprintf(ptr, "%c", mapa[y][x]);
             }
