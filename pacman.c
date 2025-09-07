@@ -315,6 +315,9 @@ void atualizar_logica() {
                 ghosts[i].x = 13;
                 ghosts[i].y = 7;
                 ghosts[i].isinbox = 1;
+
+                ghosts[i].dx = 0;
+                ghosts[i].dy = -1;
             } else {
                 lives--;
                 usleep(2000000);
