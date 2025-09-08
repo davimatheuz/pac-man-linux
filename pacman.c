@@ -278,8 +278,6 @@ void atualizar_logica() {
         power_pill_timer--;
     }
 
-    atualizar_logica_fantasmas();
-
     int intencao_x = pacman.x + pacman.next_dx;
     int intencao_y = pacman.y + pacman.next_dy;
 
@@ -340,6 +338,8 @@ void atualizar_logica() {
             break;
         }
     }
+
+    atualizar_logica_fantasmas();
 
     if (pills_captured >= PILLS_PER_LEVEL && pills_captured % PILLS_PER_LEVEL == 0 &&
         !(pacman.x == 13 && pacman.y == 13)) {
