@@ -16,7 +16,7 @@
 #define EMPTY_CHAR ' '
 #define NUM_GHOSTS 2
 #define VIDAS_INICIAIS 4
-#define LEVEL_SCORE 2380
+#define PILLS_PER_LEVEL 238
 #define POWER_PILL_CHAR '$'
 #define FLEEING_GHOST_CHAR 'w'
 #define POWER_PILL_DURATION 40
@@ -39,6 +39,7 @@ int score = 0;
 int lives = 0;
 int game_over = 0;
 int power_pill_timer = 0;
+int pills_captured = 0;
 
 char pilulas[ALTURA][LARGURA];
 const char *mapa[ALTURA] = {
@@ -307,9 +308,11 @@ void atualizar_logica() {
     
     if (pilulas[pacman.y][pacman.x] == PILL_CHAR) {
         score += 10;
+        pills_captured++;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
     } else if (pilulas[pacman.y][pacman.x] == POWER_PILL_CHAR) {
         score += 50;
+        pills_captured++;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
         power_pill_timer = POWER_PILL_DURATION;
     }
@@ -338,7 +341,7 @@ void atualizar_logica() {
         }
     }
 
-    if (score >= LEVEL_SCORE && score % LEVEL_SCORE == 0) {
+    if (pills_captured >= PILLS_PER_LEVEL && pills_captured % PILLS_PER_LEVEL == 0) {
         usleep(2000000);
         reset_positions();
         preencher_pilulas();
