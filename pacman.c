@@ -125,6 +125,11 @@ void atualizar_logica_fantasmas() {
             alvo_x = 13;
             alvo_y = 6;
 
+            if (!power_pill_timer > 0) {
+                ghosts[i].dy = -1;
+                ghosts[i].dx = 0;
+            }
+
             if (ghosts[i].x == alvo_x && ghosts[i].y == alvo_y) {
                 ghosts[i].isinbox = 0;
             }
@@ -232,6 +237,7 @@ void reset_positions() {
     pacman.dy = 0;
     pacman.next_dx = 0;
     pacman.next_dy = 0;
+    power_pill_timer = 0;
 
     for (int i = 0; i < NUM_GHOSTS; i++) {
         ghosts[i].x = 13;
@@ -317,7 +323,7 @@ void atualizar_logica() {
                 ghosts[i].isinbox = 1;
 
                 ghosts[i].dx = 0;
-                ghosts[i].dy = -1;
+                ghosts[i].dy = 0;
             } else {
                 lives--;
                 usleep(2000000);
@@ -362,7 +368,7 @@ void desenhar_tela() {
             } else if (fantasma_aqui) {
                 ptr += sprintf(ptr, "%c", char_fantasma_atual);
             } else if (pilulas[y][x] == PILL_CHAR || pilulas[y][x] == POWER_PILL_CHAR) {
-                ptr += sprintf(ptr, "%c", pilulas[y][x]); //se ocorrer um erro, ele está aqui, mudança de PILL_CHAR para pilulas[x][y]
+                ptr += sprintf(ptr, "%c", pilulas[y][x]);
             } else {
                 ptr += sprintf(ptr, "%c", mapa[y][x]);
             }
