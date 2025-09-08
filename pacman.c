@@ -271,6 +271,32 @@ void preencher_pilulas() {
     pilulas[13][13] = EMPTY_CHAR;
 }
 
+void verifica_colisao() {
+    for (int i = 0; i < NUM_GHOSTS; i++) {
+        if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
+            if (power_pill_timer > 0) {
+                score += 200;
+                ghosts[i].x = 13;
+                ghosts[i].y = 7;
+                ghosts[i].isinbox = 1;
+
+                ghosts[i].dx = 0;
+                ghosts[i].dy = 0;
+            } else {
+                lives--;
+                usleep(2000000);
+
+                if (lives <= 0) {
+                    game_over = 1;
+                } else {
+                    reset_positions();
+                }
+            }
+            break;
+        }
+    }
+}
+
 void atualizar_logica() {
     if (game_over) return;
 
@@ -315,31 +341,11 @@ void atualizar_logica() {
         power_pill_timer = POWER_PILL_DURATION;
     }
 
-    for (int i = 0; i < NUM_GHOSTS; i++) {
-        if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
-            if (power_pill_timer > 0) {
-                score += 200;
-                ghosts[i].x = 13;
-                ghosts[i].y = 7;
-                ghosts[i].isinbox = 1;
-
-                ghosts[i].dx = 0;
-                ghosts[i].dy = 0;
-            } else {
-                lives--;
-                usleep(2000000);
-
-                if (lives <= 0) {
-                    game_over = 1;
-                } else {
-                    reset_positions();
-                }
-            }
-            break;
-        }
-    }
+    verifica_colisao();
 
     atualizar_logica_fantasmas();
+
+    verifica_colisao();
 
     if (pills_captured >= PILLS_PER_LEVEL && pills_captured % PILLS_PER_LEVEL == 0 &&
         !(pacman.x == 13 && pacman.y == 13)) {
