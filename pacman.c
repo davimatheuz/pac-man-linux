@@ -341,7 +341,8 @@ void atualizar_logica() {
         }
     }
 
-    if (pills_captured >= PILLS_PER_LEVEL && pills_captured % PILLS_PER_LEVEL == 0) {
+    if (pills_captured >= PILLS_PER_LEVEL && pills_captured % PILLS_PER_LEVEL == 0 &&
+        !(pacman.x == 13 && pacman.y == 13)) {
         usleep(2000000);
         reset_positions();
         preencher_pilulas();
