@@ -26,8 +26,11 @@
 #define COLOR_YELLOW  "\033[33m"
 #define COLOR_WHITE   "\033[37m"
 #define COLOR_RED     "\033[31m"
-#define COLOR_CYAN    "\033[36m"
+#define COLOR_GREEN   "\033[32m"
 #define COLOR_MAGENTA "\033[35m"
+
+#define ENTER_ALT_SCREEN "\033[?1049h"
+#define EXIT_ALT_SCREEN  "\033[?1049l"
 
 typedef struct {
     int x, y;
@@ -71,6 +74,8 @@ const char *mapa[ALTURA] = {
     "+------------ ------------+"
 };
 
+void desenhar_tela();
+
 // Funções de manipulação do terminal
 struct termios old_tio, new_tio;
 
@@ -106,6 +111,10 @@ char getch() {
 void mostrar_cursor() {
     printf("\033[?25h");
     printf("\033[%d;%dH", ALTURA + 2, 20);
+    printf("\n");
+    printf("%s", EXIT_ALT_SCREEN);
+    printf("\033[2J\033[H");
+    desenhar_tela();
     printf("\n");
 }
 
@@ -367,7 +376,7 @@ void atualizar_logica() {
 void desenhar_tela() {
     char buffer_tela[(LARGURA + 30) * ALTURA + 2000];
     char *ptr = buffer_tela;
-    ptr += sprintf(ptr, "\033[2J\033[H");
+    ptr += sprintf(ptr, "\033[H");
 
     // desenha o mapa, o pacman e as pílulas em um buffer, em seguida, imprime
     for (int y = 0; y < ALTURA; y++) {
@@ -411,6 +420,7 @@ void desenhar_tela() {
 }
 
 void inicializar_jogo() {
+    printf("%s", ENTER_ALT_SCREEN);
     configurar_terminal();
     printf("\033[?25l");
     atexit(mostrar_cursor);
@@ -424,7 +434,7 @@ void inicializar_jogo() {
     preencher_pilulas();
 
     ghosts[0].color = COLOR_RED;
-    ghosts[1].color = COLOR_CYAN;
+    ghosts[1].color = COLOR_GREEN;
 }
 
 int main() {
