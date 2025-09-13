@@ -21,6 +21,14 @@
 #define FLEEING_GHOST_CHAR 'w'
 #define POWER_PILL_DURATION 40
 
+#define COLOR_RESET   "\033[0m"
+#define COLOR_BLUE    "\033[34m"
+#define COLOR_YELLOW  "\033[33m"
+#define COLOR_WHITE   "\033[37m"
+#define COLOR_RED     "\033[31m"
+#define COLOR_CYAN    "\033[36m"
+#define COLOR_MAGENTA "\033[35m"
+
 typedef struct {
     int x, y;
     int dx, dy;
@@ -31,6 +39,7 @@ typedef struct {
     int x, y;
     int dx, dy;
     int isinbox;
+    const char* color;
 } Ghost;
 
 Pacman pacman;
@@ -39,7 +48,7 @@ int score = 0;
 int lives = 0;
 int game_over = 0;
 int power_pill_timer = 0;
-int pills_captured = 0;
+int pills_captured;
 
 char pilulas[ALTURA][LARGURA];
 const char *mapa[ALTURA] = {
@@ -356,42 +365,45 @@ void atualizar_logica() {
 }
 
 void desenhar_tela() {
-    char buffer_tela[(LARGURA + 1) * ALTURA + 1000];
+    char buffer_tela[(LARGURA + 30) * ALTURA + 2000];
     char *ptr = buffer_tela;
     ptr += sprintf(ptr, "\033[2J\033[H");
 
     // desenha o mapa, o pacman e as pílulas em um buffer, em seguida, imprime
     for (int y = 0; y < ALTURA; y++) {
         for (int x = 0; x < strlen(mapa[y]); x++) {
-            int fantasma_aqui = 0;
+
+            int ghost_index_here = -1;
             for (int i = 0; i < NUM_GHOSTS; i++) {
                 if (ghosts[i].x == x && ghosts[i].y == y) {
-                    fantasma_aqui = 1;
+                    ghost_index_here = i;
                     break;
                 }
             }
 
-            char char_fantasma_atual = (power_pill_timer > 0) ? FLEEING_GHOST_CHAR : GHOST_CHAR;
-
             if (y == pacman.y && x == pacman.x) {
-                ptr += sprintf(ptr, "%c", PACMAN_CHAR);
-            } else if (fantasma_aqui) {
-                ptr += sprintf(ptr, "%c", char_fantasma_atual);
+                ptr += sprintf(ptr, "%s%c", COLOR_YELLOW, PACMAN_CHAR);
+            } else if (ghost_index_here != -1) {
+                const char* ghost_color = (power_pill_timer > 0) ? COLOR_MAGENTA : ghosts[ghost_index_here].color;
+                char ghost_char = (power_pill_timer > 0) ? FLEEING_GHOST_CHAR : GHOST_CHAR;
+
+                ptr += sprintf(ptr, "%s%c", ghost_color, ghost_char);
             } else if (pilulas[y][x] == PILL_CHAR || pilulas[y][x] == POWER_PILL_CHAR) {
-                ptr += sprintf(ptr, "%c", pilulas[y][x]);
+                ptr += sprintf(ptr, "%s%c", COLOR_WHITE, pilulas[y][x]);
             } else {
-                ptr += sprintf(ptr, "%c", mapa[y][x]);
+                ptr += sprintf(ptr, "%s%c", COLOR_BLUE, mapa[y][x]);
             }
         }
         ptr += sprintf(ptr, "\n");
     }
 
+    ptr += sprintf(ptr, "%s", COLOR_RESET);
     ptr += sprintf(ptr, "\033[%d;%dH", ALTURA + 2, 1);
     ptr += sprintf(ptr, "Score: %-5d   Lives: %d", score, lives);
 
     if (game_over) {
         ptr += sprintf(ptr, "\033[%d;%dH", ALTURA / 2 + 1, LARGURA / 2 - 4);
-        ptr += sprintf(ptr, "GAME OVER");
+        ptr += sprintf(ptr, "%sGAME OVER", COLOR_RED);
     }
 
     printf("%s", buffer_tela);
@@ -405,10 +417,14 @@ void inicializar_jogo() {
 
     lives = VIDAS_INICIAIS;
     score = 0;
+    pills_captured = 0;
     game_over = 0;
 
     reset_positions();
     preencher_pilulas();
+
+    ghosts[0].color = COLOR_RED;
+    ghosts[1].color = COLOR_CYAN;
 }
 
 int main() {
