@@ -108,14 +108,11 @@ char getch() {
 }
 
 // mostra o cursor quando o jogo acaba e configura a posição correta para printar a entrada
-void mostrar_cursor() {
-    printf("\033[?25h");
-    printf("\033[%d;%dH", ALTURA + 2, 20);
-    printf("\n");
+void restauração_final() {
     printf("%s", EXIT_ALT_SCREEN);
-    printf("\033[2J\033[H");
     desenhar_tela();
     printf("\n");
+    printf("\033[?25h");
 }
 
 int calcular_distancia_manhattan(int x1, int y1, int x2, int y2) {
@@ -411,8 +408,9 @@ void desenhar_tela() {
     ptr += sprintf(ptr, "Score: %-5d   Lives: %d", score, lives);
 
     if (game_over) {
-        ptr += sprintf(ptr, "\033[%d;%dH", ALTURA / 2 + 1, LARGURA / 2 - 4);
+        ptr += sprintf(ptr, "\033[%d;%dH", ALTURA / 2 + 2, LARGURA / 2 - 4);
         ptr += sprintf(ptr, "%sGAME OVER", COLOR_RED);
+        ptr += sprintf(ptr, "\033[%d;%dH", ALTURA + 2, 20);
     }
 
     printf("%s", buffer_tela);
@@ -423,7 +421,7 @@ void inicializar_jogo() {
     printf("%s", ENTER_ALT_SCREEN);
     configurar_terminal();
     printf("\033[?25l");
-    atexit(mostrar_cursor);
+    atexit(restauração_final);
 
     lives = VIDAS_INICIAIS;
     score = 0;
