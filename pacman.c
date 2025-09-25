@@ -10,6 +10,8 @@
 #define ALTURA 17
 #define LARGURA 28
 #define PACMAN_CHAR 'C'
+#define PACMAN_DYING_CHAR_1 '('
+#define PACMAN_DYING_CHAR_2 '.'
 #define GHOST_CHAR '@'
 #define DELAY 250000
 #define PILL_CHAR '*'
@@ -23,10 +25,10 @@
 #define SOUND_DIR "sounds/"
 
 #define COLOR_RESET   "\033[0m"
-#define COLOR_BLUE    "\033[34m"
-#define COLOR_YELLOW  "\033[33m"
+#define COLOR_BLUE    "\033[38;2;33;32;255m"
+#define COLOR_YELLOW  "\033[38;2;255;255;0m"
 #define COLOR_WHITE   "\033[37m"
-#define COLOR_RED     "\033[31m"
+#define COLOR_RED     "\033[38;2;255;0;0m"
 #define COLOR_GREEN   "\033[32m"
 #define COLOR_MAGENTA "\033[35m"
 
@@ -77,8 +79,9 @@ const char *mapa[ALTURA] = {
 };
 
 // protótipo de funções
-void desenhar_tela();
+void desenhar_tela(int desenhar_fantasmas);
 void play_sound(const char* sound_file);
+void play_sound_blocking(const char* sound_file);
 
 // Funções de manipulação do terminal
 struct termios old_tio, new_tio;
@@ -114,7 +117,7 @@ char getch() {
 // mostra o cursor quando o jogo acaba e configura a posição correta para printar a entrada
 void restauração_final() {
     printf("%s", EXIT_ALT_SCREEN);
-    desenhar_tela();
+    desenhar_tela(0);
     printf("\n");
     printf("\033[?25h");
 }
@@ -291,6 +294,31 @@ void preencher_pilulas() {
     pilulas[13][13] = EMPTY_CHAR;
 }
 
+void death_sequence() {
+    desenhar_tela(0);
+    usleep(1000000);
+
+    printf("\033[%d;%dH", pacman.y + 1, pacman.x + 1);
+    printf("%s%c", COLOR_YELLOW, PACMAN_DYING_CHAR_1);
+    fflush(stdout);
+
+    play_sound_blocking("death_0.wav");
+
+    printf("\033[%d;%dH", pacman.y + 1, pacman.x + 1);
+    printf("%s%c", COLOR_YELLOW, PACMAN_DYING_CHAR_2);
+    fflush(stdout);
+
+    play_sound_blocking("death_1.wav");
+
+    usleep(1000000);
+
+    if (lives <= 0) {
+        game_over = 1;
+    } else {
+        reset_positions();
+    }
+}
+
 void verifica_colisao() {
     for (int i = 0; i < NUM_GHOSTS; i++) {
         if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
@@ -304,13 +332,7 @@ void verifica_colisao() {
                 ghosts[i].dy = 0;
             } else {
                 lives--;
-                usleep(2000000);
-
-                if (lives <= 0) {
-                    game_over = 1;
-                } else {
-                    reset_positions();
-                }
+                death_sequence();
             }
             break;
         }
@@ -392,8 +414,8 @@ void atualizar_logica() {
     }
 }
 
-void desenhar_tela() {
-    char buffer_tela[(LARGURA + 30) * ALTURA + 2000];
+void desenhar_tela(int desenhar_fantasmas) {
+    char buffer_tela[10000]; // (LARGURA + 30) * ALTURA + 2000
     char *ptr = buffer_tela;
     ptr += sprintf(ptr, "\033[H");
 
@@ -402,10 +424,13 @@ void desenhar_tela() {
         for (int x = 0; x < strlen(mapa[y]); x++) {
 
             int ghost_index_here = -1;
-            for (int i = 0; i < NUM_GHOSTS; i++) {
-                if (ghosts[i].x == x && ghosts[i].y == y) {
-                    ghost_index_here = i;
-                    break;
+
+            if (desenhar_fantasmas) {
+                for (int i = 0; i < NUM_GHOSTS; i++) {
+                    if (ghosts[i].x == x && ghosts[i].y == y) {
+                        ghost_index_here = i;
+                        break;
+                    }
                 }
             }
 
@@ -452,7 +477,7 @@ void play_sound_blocking(const char* sound_file) {
 }
 
 void ready_screen() {
-    desenhar_tela();
+    desenhar_tela(1);
     printf("\033[%d;%dH", ALTURA / 2 + 2, LARGURA / 2 - 3);
     printf("%sREADY!!", COLOR_YELLOW);
     fflush(stdout);
@@ -485,7 +510,7 @@ int main() {
     while (1) {
         processar_entrada();
         atualizar_logica();
-        desenhar_tela();
+        desenhar_tela(1);
         if (game_over) {
             usleep(3000000);
             break;
