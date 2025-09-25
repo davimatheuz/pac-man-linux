@@ -20,6 +20,7 @@
 #define POWER_PILL_CHAR '$'
 #define FLEEING_GHOST_CHAR 'w'
 #define POWER_PILL_DURATION 40
+#define SOUND_DIR "sounds/"
 
 #define COLOR_RESET   "\033[0m"
 #define COLOR_BLUE    "\033[34m"
@@ -417,6 +418,27 @@ void desenhar_tela() {
     fflush(stdout);
 }
 
+void play_sound(const char* sound_file) {
+    char command[256];
+    sprintf(command, "paplay " SOUND_DIR "%s > /dev/null 2>&1 &", sound_file);
+    system(command);
+}
+
+void play_sound_blocking(const char* sound_file) {
+    char command[256];
+    sprintf(command, "paplay " SOUND_DIR "%s > /dev/null 2>&1", sound_file);
+    system(command);
+}
+
+void ready_screen() {
+    desenhar_tela();
+    printf("\033[%d;%dH", ALTURA / 2 + 2, LARGURA / 2 - 3);
+    printf("%sREADY!!", COLOR_YELLOW);
+    fflush(stdout);
+
+    play_sound_blocking("intro_sound.wav");
+}
+
 void inicializar_jogo() {
     printf("%s", ENTER_ALT_SCREEN);
     configurar_terminal();
@@ -437,7 +459,7 @@ void inicializar_jogo() {
 
 int main() {
     inicializar_jogo();
-
+    ready_screen();
     while (1) {
         processar_entrada();
         atualizar_logica();
