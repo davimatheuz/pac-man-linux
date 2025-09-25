@@ -53,6 +53,7 @@ int lives = 0;
 int game_over = 0;
 int power_pill_timer = 0;
 int pills_captured;
+int waka_toggle = 0;
 
 char pilulas[ALTURA][LARGURA];
 const char *mapa[ALTURA] = {
@@ -75,7 +76,9 @@ const char *mapa[ALTURA] = {
     "+------------ ------------+"
 };
 
+// protótipo de funções
 void desenhar_tela();
+void play_sound(const char* sound_file);
 
 // Funções de manipulação do terminal
 struct termios old_tio, new_tio;
@@ -255,6 +258,7 @@ void reset_positions() {
     pacman.next_dx = 0;
     pacman.next_dy = 0;
     power_pill_timer = 0;
+    waka_toggle = 0;
 
     for (int i = 0; i < NUM_GHOSTS; i++) {
         ghosts[i].x = 13;
@@ -350,11 +354,28 @@ void atualizar_logica() {
         score += 10;
         pills_captured++;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
+
+        if (waka_toggle == 0) {
+            play_sound("wa_sound.wav");
+            waka_toggle = 1;
+        } else {
+            play_sound("ka_sound.wav");
+            waka_toggle = 0;
+        }
+
     } else if (pilulas[pacman.y][pacman.x] == POWER_PILL_CHAR) {
         score += 50;
         pills_captured++;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
         power_pill_timer = POWER_PILL_DURATION;
+
+        if (waka_toggle == 0) {
+            play_sound("wa_sound.wav");
+            waka_toggle = 1;
+        } else {
+            play_sound("ka_sound.wav");
+            waka_toggle = 0;
+        }
     }
 
     verifica_colisao();
@@ -449,6 +470,7 @@ void inicializar_jogo() {
     score = 0;
     pills_captured = 0;
     game_over = 0;
+    waka_toggle = 0;
 
     reset_positions();
     preencher_pilulas();
