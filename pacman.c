@@ -350,7 +350,7 @@ void verifica_colisao() {
         if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
             if (ghosts[i].state == FLEEING) {
                 score += 200;
-                //play_sound("eat_ghost.wav");
+                play_sound_blocking("eat_ghost.wav");
                 ghosts[i].state = EATEN;
             } else {
                 lives--;
@@ -407,9 +407,7 @@ void atualizar_logica() {
         score += 50;
         pills_captured++;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
-        // play_sound("eat_power_pill.wav");
 
-        // Tocar o som de comer a pílula especial e manter o abaixo
         if (waka_toggle == 0) {
             play_sound("wa_sound.wav");
             waka_toggle = 1;
