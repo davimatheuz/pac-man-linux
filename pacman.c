@@ -34,8 +34,8 @@
 #define COLOR_YELLOW  "\033[38;2;255;255;0m"
 #define COLOR_WHITE   "\033[37m"
 #define COLOR_RED     "\033[38;2;255;0;0m"
-#define COLOR_GREEN   "\033[32m"
-#define COLOR_MAGENTA "\033[35m"
+#define COLOR_CYAN   "\033[38;2;0;255;255m"
+#define COLOR_SALMON  "\033[38;2;255;186;173m"
 
 #define ENTER_ALT_SCREEN "\033[?1049h"
 #define EXIT_ALT_SCREEN  "\033[?1049l"
@@ -483,7 +483,7 @@ void desenhar_tela(int desenhar_fantasmas) {
                 }
                 ptr += sprintf(ptr, "%s%c", cor_fantasma_atual, char_fantasma_atual);
             } else if (pilulas[y][x] == PILL_CHAR || pilulas[y][x] == POWER_PILL_CHAR) {
-                ptr += sprintf(ptr, "%s%c", COLOR_WHITE, pilulas[y][x]);
+                ptr += sprintf(ptr, "%s%c", COLOR_SALMON, pilulas[y][x]);
             } else {
                 ptr += sprintf(ptr, "%s%c", COLOR_BLUE, mapa[y][x]);
             }
@@ -544,7 +544,7 @@ void inicializar_jogo() {
     preencher_pilulas();
 
     ghosts[0].color = COLOR_RED;
-    ghosts[1].color = COLOR_GREEN;
+    ghosts[1].color = COLOR_CYAN;
 }
 
 int main() {
