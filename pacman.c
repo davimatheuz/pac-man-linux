@@ -6,13 +6,19 @@
 #include <sys/select.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #define ALTURA 17
 #define LARGURA 28
-#define PACMAN_CHAR 'C'
+
+#define PACMAN_CHAR         'C'
 #define PACMAN_DYING_CHAR_1 '('
 #define PACMAN_DYING_CHAR_2 '.'
-#define GHOST_CHAR '@'
+
+#define GHOST_CHAR         '@'
+#define FLEEING_GHOST_CHAR 'w'
+#define EATEN_GHOST_CHAR   'e'
+
 #define DELAY 250000
 #define PILL_CHAR '*'
 #define EMPTY_CHAR ' '
@@ -20,7 +26,6 @@
 #define VIDAS_INICIAIS 4
 #define PILLS_PER_LEVEL 238
 #define POWER_PILL_CHAR '$'
-#define FLEEING_GHOST_CHAR 'w'
 #define POWER_PILL_DURATION 40
 #define SOUND_DIR "sounds/"
 
@@ -35,6 +40,13 @@
 #define ENTER_ALT_SCREEN "\033[?1049h"
 #define EXIT_ALT_SCREEN  "\033[?1049l"
 
+typedef enum {
+    IN_BOX,
+    CHASING,
+    FLEEING,
+    EATEN
+} Ghoststate;
+
 typedef struct {
     int x, y;
     int dx, dy;
@@ -44,8 +56,9 @@ typedef struct {
 typedef struct {
     int x, y;
     int dx, dy;
-    int isinbox;
     const char* color;
+    Ghoststate state;
+    int state_timer;
 } Ghost;
 
 Pacman pacman;
@@ -53,7 +66,6 @@ Ghost ghosts[NUM_GHOSTS];
 int score = 0;
 int lives = 0;
 int game_over = 0;
-int power_pill_timer = 0;
 int pills_captured;
 int waka_toggle = 0;
 
@@ -142,31 +154,55 @@ void processar_entrada() {
 void atualizar_logica_fantasmas() {
     for (int i = 0; i < NUM_GHOSTS; i++) {
         int alvo_x, alvo_y;
+        int modo_busca = 0;
 
-        // Verifica se o fantasma está dentro de sua caixa e atribui o alvo adequado
-        if (ghosts[i].isinbox) {
-            alvo_x = 13;
-            alvo_y = 6;
+        switch (ghosts[i].state) {
+            case IN_BOX:
+                alvo_x = 13;
+                alvo_y = 6;
+                modo_busca = 0;
 
-            if (!power_pill_timer > 0) {
-                ghosts[i].dy = -1;
-                ghosts[i].dx = 0;
-            }
+                if (ghosts[i].x == alvo_x && ghosts[i].y == alvo_y) {
+                    ghosts[i].state = CHASING;
+                }
+                break;
+            
+            case CHASING:
+                alvo_x = pacman.x;
+                alvo_y = pacman.y;
+                modo_busca = 0;
+                break;
+            
+            case FLEEING:
+                alvo_x = pacman.x;
+                alvo_y = pacman.y;
+                modo_busca = 1;
 
-            if (ghosts[i].x == alvo_x && ghosts[i].y == alvo_y) {
-                ghosts[i].isinbox = 0;
-            }
+                if (ghosts[i].state_timer > 0) {
+                    ghosts[i].state_timer--;
+                }
+                if(ghosts[i].state_timer == 0) {
+                    ghosts[i].state = CHASING;
+                }
+                break;
+            
+            case EATEN:
+                alvo_x = 13;
+                alvo_y = 6;
+                modo_busca = 0;
+                break;
         }
-        else {
-            alvo_x = pacman.x;
-            alvo_y = pacman.y;
+
+        if (ghosts[i].state == EATEN && ghosts[i].x == alvo_x && ghosts[i].y == alvo_y) {
+            ghosts[i].x = 13; ghosts[i].y = 7;
+            ghosts[i].state = IN_BOX;
+            ghosts[i].dx = 0; ghosts[i].dy = -1;
+            continue;
         }
 
         int melhor_dx = 0, melhor_dy = 0;
-
         // Cima, esquerda, baixo, direita
         int direcoes[4][2] = {{0, -1}, {-1, 0}, {0, 1}, {1, 0}};
-
         if (i == 1) {
             direcoes[0][0] = -1; direcoes[0][1] = 0; // Esquerda
             direcoes[1][0] = 1;  direcoes[1][1] = 0; // Direita
@@ -174,70 +210,58 @@ void atualizar_logica_fantasmas() {
             direcoes[3][0] = 0;  direcoes[3][1] = 1;  // Baixo
         }
 
-        if (power_pill_timer > 0 && !ghosts[i].isinbox) {
-            int maior_distancia = -1;
-            for (int j = 0; j < 4; j++) {
-                int dx_teste = direcoes[j][0];
-                int dy_teste = direcoes[j][1];
+        int draw_directions[4][2];
+        int draw_counter = 0;
+        int melhor_distancia = (modo_busca == 0) ? 9999 : -1;
 
-                // Impede o fantasma de mudar a direção 180º
-                if (dx_teste == -ghosts[i].dx && dy_teste == -ghosts[i].dy) {
-                    continue;
-                }
+        for (int j = 0; j < 4; j++) {
+            int dx_teste = direcoes[j][0];
+            int dy_teste = direcoes[j][1];
 
-                int proximo_x = ghosts[i].x + dx_teste;
-                int proximo_y = ghosts[i].y + dy_teste;
+            if (dx_teste == -ghosts[i].dx && dy_teste == -ghosts[i].dy) {
+                continue;
+            }
 
-                // Impede o fantasma de reentrar na caixa
-                if (!ghosts[i].isinbox && proximo_y == 7 && proximo_x == 13) {
-                    continue;
-                }
+            int proximo_x = ghosts[i].x + dx_teste;
+            int proximo_y = ghosts[i].y + dy_teste;
 
-                if (mapa[proximo_y][proximo_x] == EMPTY_CHAR) {
-                    int distancia = calcular_distancia_manhattan(proximo_x, proximo_y, alvo_x, alvo_y);
-                    if (distancia > maior_distancia) {
-                        maior_distancia = distancia;
-                        melhor_dx = dx_teste;
-                        melhor_dy = dy_teste;
-                    }
+            int eh_porta = (proximo_x == 13 && proximo_y == 6);
+
+            if ((ghosts[i].state == CHASING || ghosts[i].state == FLEEING) && (ghosts[i].x == 13 && ghosts[i].y == 6)) {
+                continue;
+            }
+
+            if (mapa[proximo_y][proximo_x] == EMPTY_CHAR || (ghosts[i].state == IN_BOX && eh_porta) ||
+                (ghosts[i].state == EATEN && eh_porta)) {
+                
+                int distancia = calcular_distancia_manhattan(proximo_x, proximo_y, alvo_x, alvo_y);
+
+                int nova_melhor_encontrada = (modo_busca == 0) ? (distancia < melhor_distancia) : (distancia > melhor_distancia);
+
+                if (nova_melhor_encontrada) {
+                    melhor_distancia = distancia;
+                    draw_counter = 1;
+                    draw_directions[0][0] = dx_teste;
+                    draw_directions[0][1] = dy_teste;
+                } else if (distancia == melhor_distancia) {
+                    draw_directions[draw_counter][0] = dx_teste;
+                    draw_directions[draw_counter][1] = dy_teste;
+                    draw_counter++;
                 }
             }
-        } else {
-            int menor_distancia = 9999;
-            // Verifica, para cada uma das direções, a menor distância até o pacman
-            for (int j = 0; j < 4; j++) {
-                int dx_teste = direcoes[j][0];
-                int dy_teste = direcoes[j][1];
-
-                // Impede o fantasma de mudar a direção 180º
-                if (dx_teste == -ghosts[i].dx && dy_teste == -ghosts[i].dy) {
-                    continue;
-                }
-
-                int proximo_x = ghosts[i].x + dx_teste;
-                int proximo_y = ghosts[i].y + dy_teste;
-
-                // Impede o fantasma de reentrar na caixa
-                if (!ghosts[i].isinbox && proximo_y == 7 && proximo_x == 13) {
-                    continue;
-                }
-
-                // Atualiza a menor distância até o pacman
-                if (mapa[proximo_y][proximo_x] == EMPTY_CHAR) {
-                    int distancia = calcular_distancia_manhattan(proximo_x, proximo_y, alvo_x, alvo_y);
-                    if (distancia < menor_distancia) {
-                        menor_distancia = distancia;
-                        melhor_dx = dx_teste;
-                        melhor_dy = dy_teste;
-                    }
-                }
-            }
-        }     
-
-        if (melhor_dx != 0 || melhor_dy != 0) {
-            ghosts[i].dx = melhor_dx;
-            ghosts[i].dy = melhor_dy;
         }
+
+        if (draw_counter > 0) {
+            int escolha = rand() % draw_counter;
+            melhor_dx = draw_directions[escolha][0];
+            melhor_dy = draw_directions[escolha][1];
+        } else {
+            melhor_dx = ghosts[i].dx;
+            melhor_dy = ghosts[i].dy;
+        }
+
+        ghosts[i].dx = melhor_dx;
+        ghosts[i].dy = melhor_dy;
 
         ghosts[i].x += ghosts[i].dx;
         ghosts[i].y += ghosts[i].dy;
@@ -260,7 +284,6 @@ void reset_positions() {
     pacman.dy = 0;
     pacman.next_dx = 0;
     pacman.next_dy = 0;
-    power_pill_timer = 0;
     waka_toggle = 0;
 
     for (int i = 0; i < NUM_GHOSTS; i++) {
@@ -268,7 +291,8 @@ void reset_positions() {
         ghosts[i].y = 7;
         ghosts[i].dx = 0;
         ghosts[i].dy = -1;
-        ghosts[i].isinbox = 1;
+        ghosts[i].state = IN_BOX;
+        ghosts[i].state_timer = 0;
     }
 }
 
@@ -321,15 +345,13 @@ void death_sequence() {
 
 void verifica_colisao() {
     for (int i = 0; i < NUM_GHOSTS; i++) {
-        if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
-            if (power_pill_timer > 0) {
-                score += 200;
-                ghosts[i].x = 13;
-                ghosts[i].y = 7;
-                ghosts[i].isinbox = 1;
+        if (ghosts[i].state == EATEN) continue;
 
-                ghosts[i].dx = 0;
-                ghosts[i].dy = 0;
+        if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
+            if (ghosts[i].state == FLEEING) {
+                score += 200;
+                //play_sound("eat_ghost.wav");
+                ghosts[i].state = EATEN;
             } else {
                 lives--;
                 death_sequence();
@@ -341,10 +363,6 @@ void verifica_colisao() {
 
 void atualizar_logica() {
     if (game_over) return;
-
-    if (power_pill_timer > 0) {
-        power_pill_timer--;
-    }
 
     int intencao_x = pacman.x + pacman.next_dx;
     int intencao_y = pacman.y + pacman.next_dy;
@@ -389,8 +407,9 @@ void atualizar_logica() {
         score += 50;
         pills_captured++;
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
-        power_pill_timer = POWER_PILL_DURATION;
+        // play_sound("eat_power_pill.wav");
 
+        // Tocar o som de comer a pílula especial e manter o abaixo
         if (waka_toggle == 0) {
             play_sound("wa_sound.wav");
             waka_toggle = 1;
@@ -398,12 +417,17 @@ void atualizar_logica() {
             play_sound("ka_sound.wav");
             waka_toggle = 0;
         }
+
+        for (int i = 0; i < NUM_GHOSTS; i++) {
+            if (ghosts[i].state != IN_BOX && ghosts[i].state != EATEN) {
+                ghosts[i].state = FLEEING;
+                ghosts[i].state_timer = POWER_PILL_DURATION;
+            }
+        }
     }
 
     verifica_colisao();
-
     atualizar_logica_fantasmas();
-
     verifica_colisao();
 
     if (pills_captured >= PILLS_PER_LEVEL && pills_captured % PILLS_PER_LEVEL == 0 &&
@@ -415,16 +439,14 @@ void atualizar_logica() {
 }
 
 void desenhar_tela(int desenhar_fantasmas) {
-    char buffer_tela[10000]; // (LARGURA + 30) * ALTURA + 2000
+    char buffer_tela[10000];
     char *ptr = buffer_tela;
     ptr += sprintf(ptr, "\033[H");
 
     // desenha o mapa, o pacman e as pílulas em um buffer, em seguida, imprime
     for (int y = 0; y < ALTURA; y++) {
         for (int x = 0; x < strlen(mapa[y]); x++) {
-
             int ghost_index_here = -1;
-
             if (desenhar_fantasmas) {
                 for (int i = 0; i < NUM_GHOSTS; i++) {
                     if (ghosts[i].x == x && ghosts[i].y == y) {
@@ -437,10 +459,29 @@ void desenhar_tela(int desenhar_fantasmas) {
             if (y == pacman.y && x == pacman.x) {
                 ptr += sprintf(ptr, "%s%c", COLOR_YELLOW, PACMAN_CHAR);
             } else if (ghost_index_here != -1) {
-                const char* ghost_color = (power_pill_timer > 0) ? COLOR_MAGENTA : ghosts[ghost_index_here].color;
-                char ghost_char = (power_pill_timer > 0) ? FLEEING_GHOST_CHAR : GHOST_CHAR;
+                Ghost* fantasma = &ghosts[ghost_index_here];
+                char char_fantasma_atual;
+                const char* cor_fantasma_atual;
 
-                ptr += sprintf(ptr, "%s%c", ghost_color, ghost_char);
+                switch (fantasma->state) {
+                    case FLEEING:
+                        char_fantasma_atual = FLEEING_GHOST_CHAR;
+                        cor_fantasma_atual = (fantasma->state_timer < 10 && fantasma->state_timer % 2 == 0)
+                                           ? COLOR_WHITE
+                                           : COLOR_BLUE;
+                        break;
+                    
+                    case EATEN:
+                        char_fantasma_atual = EATEN_GHOST_CHAR;
+                        cor_fantasma_atual = COLOR_WHITE;
+                        break;
+                    
+                    default:
+                        char_fantasma_atual = GHOST_CHAR;
+                        cor_fantasma_atual = fantasma->color;
+                        break;
+                }
+                ptr += sprintf(ptr, "%s%c", cor_fantasma_atual, char_fantasma_atual);
             } else if (pilulas[y][x] == PILL_CHAR || pilulas[y][x] == POWER_PILL_CHAR) {
                 ptr += sprintf(ptr, "%s%c", COLOR_WHITE, pilulas[y][x]);
             } else {
@@ -490,6 +531,8 @@ void inicializar_jogo() {
     configurar_terminal();
     printf("\033[?25l");
     atexit(restauração_final);
+
+    srand(time(NULL));
 
     lives = VIDAS_INICIAIS;
     score = 0;
