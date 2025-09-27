@@ -316,6 +316,10 @@ void reset_positions() {
     pacman.next_dy = 0;
     waka_toggle = 0;
 
+    if (pills_captured == PILLS_PER_LEVEL) {
+        pills_captured = 0;
+    }
+
     for (int i = 0; i < NUM_GHOSTS; i++) {
         ghosts[i].x = 13;
         ghosts[i].y = 7;
@@ -463,12 +467,12 @@ void atualizar_logica() {
     atualizar_logica_fantasmas();
     verifica_colisao();
 
-    if (pills_captured >= PILLS_PER_LEVEL && pills_captured % PILLS_PER_LEVEL == 0 &&
-        !(pacman.x == 13 && pacman.y == 13)) {
+    if (pills_captured == PILLS_PER_LEVEL && !(pacman.x == 13 && pacman.y == 13)) {
         stop_siren();
         usleep(2000000);
         reset_positions();
         preencher_pilulas();
+        start_siren("siren0_firstloop.wav", "siren0.wav");
     }
 }
 
