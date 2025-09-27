@@ -7,6 +7,8 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <sys/types.h>
+#include <signal.h>
 
 #define ALTURA 17
 #define LARGURA 28
@@ -68,6 +70,7 @@ int lives = 0;
 int game_over = 0;
 int pills_captured;
 int waka_toggle = 0;
+pid_t ambient_sound_pid = 0;
 
 char pilulas[ALTURA][LARGURA];
 const char *mapa[ALTURA] = {
@@ -92,8 +95,10 @@ const char *mapa[ALTURA] = {
 
 // protótipo de funções
 void desenhar_tela(int desenhar_fantasmas);
-void play_sound(const char* sound_file);
-void play_sound_blocking(const char* sound_file);
+void play_sfx(const char* sound_file);
+void play_sfx_blocking(const char* sound_file);
+void start_siren(const char* intro_file, const char* loop_file);
+void stop_siren();
 
 // Funções de manipulação do terminal
 struct termios old_tio, new_tio;
@@ -128,6 +133,7 @@ char getch() {
 
 // mostra o cursor quando o jogo acaba e configura a posição correta para printar a entrada
 void restauração_final() {
+    stop_siren();
     printf("%s", EXIT_ALT_SCREEN);
     desenhar_tela(0);
     printf("\n");
@@ -183,6 +189,16 @@ void atualizar_logica_fantasmas() {
                 }
                 if(ghosts[i].state_timer == 0) {
                     ghosts[i].state = CHASING;
+                    int fleeing_ghosts_left = 0;
+                    for (int k = 0; k < NUM_GHOSTS; k++) {
+                        if (ghosts[k].state == FLEEING) {
+                            fleeing_ghosts_left = 1;
+                            break;
+                        }
+                    }
+                    if (!fleeing_ghosts_left) {
+                        start_siren("siren0_firstloop.wav", "siren0.wav");
+                    }
                 }
                 break;
             
@@ -197,6 +213,20 @@ void atualizar_logica_fantasmas() {
             ghosts[i].x = 13; ghosts[i].y = 7;
             ghosts[i].state = IN_BOX;
             ghosts[i].dx = 0; ghosts[i].dy = -1;
+
+            int fleeing_ghosts_left = 0;
+            for (int k = 0; k < NUM_GHOSTS; k++) {
+                if (ghosts[k].state == FLEEING) {
+                    fleeing_ghosts_left = 1;
+                    break;
+                }
+            }
+
+            if (fleeing_ghosts_left) {
+                start_siren("fright_firstloop.wav", "fright.wav");
+            } else {
+                start_siren("siren0_firstloop.wav", "siren0.wav");
+            }
             continue;
         }
 
@@ -326,13 +356,13 @@ void death_sequence() {
     printf("%s%c", COLOR_YELLOW, PACMAN_DYING_CHAR_1);
     fflush(stdout);
 
-    play_sound_blocking("death_0.wav");
+    play_sfx_blocking("death_0.wav");
 
     printf("\033[%d;%dH", pacman.y + 1, pacman.x + 1);
     printf("%s%c", COLOR_YELLOW, PACMAN_DYING_CHAR_2);
     fflush(stdout);
 
-    play_sound_blocking("death_1.wav");
+    play_sfx_blocking("death_1.wav");
 
     usleep(1000000);
 
@@ -340,6 +370,7 @@ void death_sequence() {
         game_over = 1;
     } else {
         reset_positions();
+        start_siren("siren0_firstloop.wav", "siren0.wav");
     }
 }
 
@@ -350,9 +381,11 @@ void verifica_colisao() {
         if (pacman.x == ghosts[i].x && pacman.y == ghosts[i].y) {
             if (ghosts[i].state == FLEEING) {
                 score += 200;
-                play_sound_blocking("eat_ghost.wav");
+                play_sfx_blocking("eat_ghost.wav");
                 ghosts[i].state = EATEN;
+                start_siren("eyes_firstloop.wav", "eyes.wav");
             } else {
+                stop_siren();
                 lives--;
                 death_sequence();
             }
@@ -396,10 +429,10 @@ void atualizar_logica() {
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
 
         if (waka_toggle == 0) {
-            play_sound("wa_sound.wav");
+            play_sfx("wa_sound.wav");
             waka_toggle = 1;
         } else {
-            play_sound("ka_sound.wav");
+            play_sfx("ka_sound.wav");
             waka_toggle = 0;
         }
 
@@ -409,12 +442,14 @@ void atualizar_logica() {
         pilulas[pacman.y][pacman.x] = EMPTY_CHAR;
 
         if (waka_toggle == 0) {
-            play_sound("wa_sound.wav");
+            play_sfx("wa_sound.wav");
             waka_toggle = 1;
         } else {
-            play_sound("ka_sound.wav");
+            play_sfx("ka_sound.wav");
             waka_toggle = 0;
         }
+
+        start_siren("fright_firstloop.wav", "fright.wav");
 
         for (int i = 0; i < NUM_GHOSTS; i++) {
             if (ghosts[i].state != IN_BOX && ghosts[i].state != EATEN) {
@@ -430,6 +465,7 @@ void atualizar_logica() {
 
     if (pills_captured >= PILLS_PER_LEVEL && pills_captured % PILLS_PER_LEVEL == 0 &&
         !(pacman.x == 13 && pacman.y == 13)) {
+        stop_siren();
         usleep(2000000);
         reset_positions();
         preencher_pilulas();
@@ -503,16 +539,44 @@ void desenhar_tela(int desenhar_fantasmas) {
     fflush(stdout);
 }
 
-void play_sound(const char* sound_file) {
+void play_sfx(const char* sound_file) {
     char command[256];
     sprintf(command, "paplay " SOUND_DIR "%s > /dev/null 2>&1 &", sound_file);
     system(command);
 }
 
-void play_sound_blocking(const char* sound_file) {
+void play_sfx_blocking(const char* sound_file) {
     char command[256];
     sprintf(command, "paplay " SOUND_DIR "%s > /dev/null 2>&1", sound_file);
     system(command);
+}
+
+void stop_siren() {
+    if (ambient_sound_pid > 0) {
+        kill(ambient_sound_pid, SIGTERM);
+        ambient_sound_pid = 0;
+    }
+}
+
+void start_siren(const char* intro_file, const char* loop_file) {
+    stop_siren();
+
+    pid_t pid = fork();
+
+    if (pid == 0) {
+        char intro_path[256], loop_path[256];
+        sprintf(intro_path, SOUND_DIR "%s", intro_file);
+        sprintf(loop_path, SOUND_DIR "%s", loop_file);
+
+        close(STDOUT_FILENO);
+        close(STDERR_FILENO);
+
+        execlp("play", "play", "-q", intro_path, loop_path, "repeat", "-", NULL);
+
+        exit(1);
+    } else if (pid > 0) {
+        ambient_sound_pid = pid;
+    }
 }
 
 void ready_screen() {
@@ -521,7 +585,8 @@ void ready_screen() {
     printf("%sREADY!!", COLOR_YELLOW);
     fflush(stdout);
 
-    play_sound_blocking("intro_sound.wav");
+    play_sfx_blocking("intro_sound.wav");
+    start_siren("siren0_firstloop.wav", "siren0.wav");
 }
 
 void inicializar_jogo() {
@@ -553,6 +618,7 @@ int main() {
         atualizar_logica();
         desenhar_tela(1);
         if (game_over) {
+            stop_siren();
             usleep(3000000);
             break;
         }
