@@ -31,6 +31,11 @@
 #define POWER_PILL_DURATION 40
 #define SOUND_DIR "sounds/"
 
+#define FRUIT_CHAR     'F'
+#define FRUIT_DURATION 36
+#define FRUIT_X        13
+#define FRUIT_Y        9
+
 #define COLOR_RESET   "\033[0m"
 #define COLOR_BLUE    "\033[38;2;33;32;255m"
 #define COLOR_YELLOW  "\033[38;2;255;255;0m"
@@ -70,6 +75,8 @@ int lives = 0;
 int game_over = 0;
 int pills_captured;
 int waka_toggle = 0;
+int fruit_visible = 0;
+int fruit_timer = 0;
 pid_t ambient_sound_pid = 0;
 
 char pilulas[ALTURA][LARGURA];
@@ -315,6 +322,8 @@ void reset_positions() {
     pacman.next_dx = 0;
     pacman.next_dy = 0;
     waka_toggle = 0;
+    fruit_visible = 0;
+    fruit_timer = 0;
 
     if (pills_captured == PILLS_PER_LEVEL) {
         pills_captured = 0;
@@ -401,6 +410,13 @@ void verifica_colisao() {
 void atualizar_logica() {
     if (game_over) return;
 
+    if (fruit_visible) {
+        fruit_timer--;
+        if (fruit_timer <= 0) {
+            fruit_visible = 0;
+        }
+    }
+
     int intencao_x = pacman.x + pacman.next_dx;
     int intencao_y = pacman.y + pacman.next_dy;
 
@@ -427,6 +443,12 @@ void atualizar_logica() {
         pacman.dy = 0;
     }
     
+    if (fruit_visible && pacman.x == FRUIT_X && pacman.y == FRUIT_Y) {
+        score += 100;
+        fruit_visible = 0;
+        play_sfx("eat_fruit.wav");
+    }
+
     if (pilulas[pacman.y][pacman.x] == PILL_CHAR) {
         score += 10;
         pills_captured++;
@@ -463,11 +485,16 @@ void atualizar_logica() {
         }
     }
 
+    if (pills_captured == 70 || pills_captured == 170) {
+        fruit_visible = 1;
+        fruit_timer = FRUIT_DURATION;
+    }
+
     verifica_colisao();
     atualizar_logica_fantasmas();
     verifica_colisao();
 
-    if (pills_captured == PILLS_PER_LEVEL && !(pacman.x == 13 && pacman.y == 13)) {
+    if (pills_captured == PILLS_PER_LEVEL) {
         stop_siren();
         usleep(2000000);
         reset_positions();
@@ -520,6 +547,8 @@ void desenhar_tela(int desenhar_fantasmas) {
                         break;
                 }
                 ptr += sprintf(ptr, "%s%c", cor_fantasma_atual, char_fantasma_atual);
+            } else if (fruit_visible && y == FRUIT_Y && x == FRUIT_X) {
+                ptr += sprintf(ptr, "%s%c", COLOR_RED, FRUIT_CHAR);
             } else if (pilulas[y][x] == PILL_CHAR || pilulas[y][x] == POWER_PILL_CHAR) {
                 ptr += sprintf(ptr, "%s%c", COLOR_SALMON, pilulas[y][x]);
             } else {
