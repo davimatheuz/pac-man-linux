@@ -14,6 +14,7 @@
 #define LARGURA 28
 
 #define PACMAN_CHAR         'C'
+#define PACMAN_CLOSING_CHAR 'c'
 #define PACMAN_DYING_CHAR_1 '('
 #define PACMAN_DYING_CHAR_2 '.'
 
@@ -75,6 +76,7 @@ int lives = 0;
 int game_over = 0;
 int pills_captured;
 int waka_toggle = 0;
+int pacman_mouth_toggle = 0;
 int fruit_visible = 0;
 int fruit_timer = 0;
 pid_t ambient_sound_pid = 0;
@@ -324,6 +326,7 @@ void reset_positions() {
     waka_toggle = 0;
     fruit_visible = 0;
     fruit_timer = 0;
+    pacman_mouth_toggle = 0;
 
     if (pills_captured == PILLS_PER_LEVEL) {
         pills_captured = 0;
@@ -501,6 +504,14 @@ void atualizar_logica() {
         preencher_pilulas();
         start_siren("siren0_firstloop.wav", "siren0.wav");
     }
+
+    if (pacman.dx != 0 || pacman.dy != 0) {
+        if (pacman_mouth_toggle == 0) {
+            pacman_mouth_toggle = 1;
+        } else {
+            pacman_mouth_toggle = 0;
+        }
+    }
 }
 
 void desenhar_tela(int desenhar_fantasmas) {
@@ -522,7 +533,8 @@ void desenhar_tela(int desenhar_fantasmas) {
             }
 
             if (y == pacman.y && x == pacman.x) {
-                ptr += sprintf(ptr, "%s%c", COLOR_YELLOW, PACMAN_CHAR);
+                char char_pacman_atual = (pacman_mouth_toggle == 0) ? PACMAN_CHAR : PACMAN_CLOSING_CHAR;
+                ptr += sprintf(ptr, "%s%c", COLOR_YELLOW, char_pacman_atual);
             } else if (ghost_index_here != -1) {
                 Ghost* fantasma = &ghosts[ghost_index_here];
                 char char_fantasma_atual;
@@ -635,6 +647,7 @@ void inicializar_jogo() {
     pills_captured = 0;
     game_over = 0;
     waka_toggle = 0;
+    pacman_mouth_toggle = 0;
 
     reset_positions();
     preencher_pilulas();
