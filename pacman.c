@@ -79,6 +79,7 @@ int waka_toggle = 0;
 int pacman_mouth_toggle = 0;
 int fruit_visible = 0;
 int fruit_timer = 0;
+int power_pill_toggle = 0;
 pid_t ambient_sound_pid = 0;
 
 char pilulas[ALTURA][LARGURA];
@@ -326,6 +327,7 @@ void reset_positions() {
     waka_toggle = 0;
     fruit_visible = 0;
     fruit_timer = 0;
+    power_pill_toggle = 0;
     pacman_mouth_toggle = 0;
 
     if (pills_captured == PILLS_PER_LEVEL) {
@@ -506,12 +508,10 @@ void atualizar_logica() {
     }
 
     if (pacman.dx != 0 || pacman.dy != 0) {
-        if (pacman_mouth_toggle == 0) {
-            pacman_mouth_toggle = 1;
-        } else {
-            pacman_mouth_toggle = 0;
-        }
+        pacman_mouth_toggle = !pacman_mouth_toggle;
     }
+
+    power_pill_toggle = !power_pill_toggle;
 }
 
 void desenhar_tela(int desenhar_fantasmas) {
@@ -561,8 +561,14 @@ void desenhar_tela(int desenhar_fantasmas) {
                 ptr += sprintf(ptr, "%s%c", cor_fantasma_atual, char_fantasma_atual);
             } else if (fruit_visible && y == FRUIT_Y && x == FRUIT_X) {
                 ptr += sprintf(ptr, "%s%c", COLOR_RED, FRUIT_CHAR);
-            } else if (pilulas[y][x] == PILL_CHAR || pilulas[y][x] == POWER_PILL_CHAR) {
+            } else if (pilulas[y][x] == PILL_CHAR) {
                 ptr += sprintf(ptr, "%s%c", COLOR_SALMON, pilulas[y][x]);
+            } else if (pilulas[y][x] == POWER_PILL_CHAR) {
+                if (power_pill_toggle == 0) {
+                    ptr += sprintf(ptr, "%s%c", COLOR_SALMON, POWER_PILL_CHAR);
+                } else {
+                    ptr += sprintf(ptr, "%s%c", COLOR_SALMON, EMPTY_CHAR);
+                }
             } else {
                 ptr += sprintf(ptr, "%s%c", COLOR_BLUE, mapa[y][x]);
             }
@@ -648,6 +654,7 @@ void inicializar_jogo() {
     game_over = 0;
     waka_toggle = 0;
     pacman_mouth_toggle = 0;
+    power_pill_toggle = 0;
 
     reset_positions();
     preencher_pilulas();
