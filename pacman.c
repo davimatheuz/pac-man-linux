@@ -106,7 +106,7 @@ const char *mapa[ALTURA] = {
 };
 
 // protótipo de funções
-void desenhar_tela(int desenhar_fantasmas, const char* map_color);
+void desenhar_tela(int desenhar_pacman, int desenhar_fantasmas, const char* map_color);
 void play_sfx(const char* sound_file);
 void play_sfx_blocking(const char* sound_file);
 void start_siren(const char* intro_file, const char* loop_file);
@@ -147,7 +147,7 @@ char getch() {
 void restauração_final() {
     stop_siren();
     printf("%s", EXIT_ALT_SCREEN);
-    desenhar_tela(0, NULL);
+    desenhar_tela(0, 0, NULL);
     printf("\n");
     printf("\033[?25h");
 }
@@ -374,7 +374,7 @@ void preencher_pilulas() {
 }
 
 void death_sequence() {
-    desenhar_tela(0, NULL);
+    desenhar_tela(1, 0, NULL);
     usleep(1000000);
 
     printf("\033[%d;%dH", pacman.y + 1, pacman.x + 1);
@@ -421,12 +421,12 @@ void verifica_colisao() {
 
 void animacao_vitoria() {
     stop_siren();
-    desenhar_tela(0, NULL);
+    desenhar_tela(1, 0, NULL);
     usleep(1000000);
 
     for (int i = 0; i < 8; i++) {
         const char* cor_do_flash = ((i % 2) != 0) ? COLOR_BLUE : COLOR_WHITE;
-        desenhar_tela(0, cor_do_flash);
+        desenhar_tela(1, 0, cor_do_flash);
         usleep(250000);
     }
 
@@ -535,7 +535,7 @@ void atualizar_logica() {
     ghost_fleeing_toggle = !ghost_fleeing_toggle;
 }
 
-void desenhar_tela(int desenhar_fantasmas, const char* map_color) {
+void desenhar_tela(int desenhar_pacman, int desenhar_fantasmas, const char* map_color) {
     char buffer_tela[10000];
     char *ptr = buffer_tela;
     ptr += sprintf(ptr, "\033[H");
@@ -555,7 +555,7 @@ void desenhar_tela(int desenhar_fantasmas, const char* map_color) {
                 }
             }
 
-            if (y == pacman.y && x == pacman.x) {
+            if (y == pacman.y && x == pacman.x && desenhar_pacman) {
                 char char_pacman_atual = (pacman_mouth_toggle == 0) ? PACMAN_CHAR : PACMAN_CLOSING_CHAR;
                 ptr += sprintf(ptr, "%s%c", COLOR_YELLOW, char_pacman_atual);
             } else if (ghost_index_here != -1) {
@@ -654,7 +654,7 @@ void start_siren(const char* intro_file, const char* loop_file) {
 }
 
 void ready_screen() {
-    desenhar_tela(1, NULL);
+    desenhar_tela(1, 0, NULL);
     printf("\033[%d;%dH", ALTURA / 2 + 2, LARGURA / 2 - 3);
     printf("%sREADY!!", COLOR_YELLOW);
     fflush(stdout);
@@ -693,12 +693,12 @@ int main() {
     while (1) {
         processar_entrada();
         atualizar_logica();
-        desenhar_tela(1, NULL);
         if (game_over) {
             stop_siren();
-            usleep(3000000);
             break;
         }
+        desenhar_tela(1, 1, NULL);
+
         usleep(DELAY);
     }
     return 0;
