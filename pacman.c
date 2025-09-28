@@ -106,7 +106,7 @@ const char *mapa[ALTURA] = {
 };
 
 // protótipo de funções
-void desenhar_tela(int desenhar_fantasmas);
+void desenhar_tela(int desenhar_fantasmas, const char* map_color);
 void play_sfx(const char* sound_file);
 void play_sfx_blocking(const char* sound_file);
 void start_siren(const char* intro_file, const char* loop_file);
@@ -147,7 +147,7 @@ char getch() {
 void restauração_final() {
     stop_siren();
     printf("%s", EXIT_ALT_SCREEN);
-    desenhar_tela(0);
+    desenhar_tela(0, NULL);
     printf("\n");
     printf("\033[?25h");
 }
@@ -374,7 +374,7 @@ void preencher_pilulas() {
 }
 
 void death_sequence() {
-    desenhar_tela(0);
+    desenhar_tela(0, NULL);
     usleep(1000000);
 
     printf("\033[%d;%dH", pacman.y + 1, pacman.x + 1);
@@ -417,6 +417,23 @@ void verifica_colisao() {
             break;
         }
     }
+}
+
+void animacao_vitoria() {
+    stop_siren();
+    desenhar_tela(0, NULL);
+    usleep(1000000);
+
+    for (int i = 0; i < 8; i++) {
+        const char* cor_do_flash = ((i % 2) != 0) ? COLOR_BLUE : COLOR_WHITE;
+        desenhar_tela(0, cor_do_flash);
+        usleep(250000);
+    }
+
+    usleep(500000);
+    reset_positions();
+    preencher_pilulas();
+    start_siren("siren0_firstloop.wav", "siren0.wav");
 }
 
 void atualizar_logica() {
@@ -507,11 +524,7 @@ void atualizar_logica() {
     verifica_colisao();
 
     if (pills_captured == PILLS_PER_LEVEL) {
-        stop_siren();
-        usleep(2000000);
-        reset_positions();
-        preencher_pilulas();
-        start_siren("siren0_firstloop.wav", "siren0.wav");
+        animacao_vitoria();
     }
 
     if (pacman.dx != 0 || pacman.dy != 0) {
@@ -522,10 +535,12 @@ void atualizar_logica() {
     ghost_fleeing_toggle = !ghost_fleeing_toggle;
 }
 
-void desenhar_tela(int desenhar_fantasmas) {
+void desenhar_tela(int desenhar_fantasmas, const char* map_color) {
     char buffer_tela[10000];
     char *ptr = buffer_tela;
     ptr += sprintf(ptr, "\033[H");
+
+    const char* cor_mapa_atual = (map_color != NULL) ? map_color : COLOR_BLUE;
 
     // desenha o mapa, o pacman e as pílulas em um buffer, em seguida, imprime
     for (int y = 0; y < ALTURA; y++) {
@@ -578,7 +593,7 @@ void desenhar_tela(int desenhar_fantasmas) {
                     ptr += sprintf(ptr, "%s%c", COLOR_SALMON, EMPTY_CHAR);
                 }
             } else {
-                ptr += sprintf(ptr, "%s%c", COLOR_BLUE, mapa[y][x]);
+                ptr += sprintf(ptr, "%s%c", cor_mapa_atual, mapa[y][x]);
             }
         }
         ptr += sprintf(ptr, "\n");
@@ -639,7 +654,7 @@ void start_siren(const char* intro_file, const char* loop_file) {
 }
 
 void ready_screen() {
-    desenhar_tela(1);
+    desenhar_tela(1, NULL);
     printf("\033[%d;%dH", ALTURA / 2 + 2, LARGURA / 2 - 3);
     printf("%sREADY!!", COLOR_YELLOW);
     fflush(stdout);
@@ -678,7 +693,7 @@ int main() {
     while (1) {
         processar_entrada();
         atualizar_logica();
-        desenhar_tela(1);
+        desenhar_tela(1, NULL);
         if (game_over) {
             stop_siren();
             usleep(3000000);
