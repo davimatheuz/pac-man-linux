@@ -21,15 +21,16 @@
 #define GHOST_CHAR         '@'
 #define FLEEING_GHOST_CHAR 'w'
 #define EATEN_GHOST_CHAR   'e'
+#define NUM_GHOSTS          2
+
+#define EMPTY_CHAR          ' '
+#define PILL_CHAR           '.'
+#define POWER_PILL_CHAR     '*'
+#define PILLS_PER_LEVEL     238
+#define POWER_PILL_DURATION 40
 
 #define DELAY 250000
-#define PILL_CHAR '*'
-#define EMPTY_CHAR ' '
-#define NUM_GHOSTS 2
 #define VIDAS_INICIAIS 4
-#define PILLS_PER_LEVEL 238
-#define POWER_PILL_CHAR '$'
-#define POWER_PILL_DURATION 40
 #define SOUND_DIR "sounds/"
 
 #define FRUIT_CHAR     'F'
