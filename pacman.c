@@ -77,6 +77,7 @@ int game_over = 0;
 int pills_captured;
 int waka_toggle = 0;
 int pacman_mouth_toggle = 0;
+int ghost_fleeing_toggle = 0;
 int fruit_visible = 0;
 int fruit_timer = 0;
 int power_pill_toggle = 0;
@@ -240,6 +241,10 @@ void atualizar_logica_fantasmas() {
             continue;
         }
 
+        if (ghosts[i].state == FLEEING && ghost_fleeing_toggle == 1) {
+            continue;
+        }
+
         int melhor_dx = 0, melhor_dy = 0;
         // Cima, esquerda, baixo, direita
         int direcoes[4][2] = {{0, -1}, {-1, 0}, {0, 1}, {1, 0}};
@@ -329,6 +334,7 @@ void reset_positions() {
     fruit_timer = 0;
     power_pill_toggle = 0;
     pacman_mouth_toggle = 0;
+    ghost_fleeing_toggle = 0;
 
     if (pills_captured == PILLS_PER_LEVEL) {
         pills_captured = 0;
@@ -512,6 +518,7 @@ void atualizar_logica() {
     }
 
     power_pill_toggle = !power_pill_toggle;
+    ghost_fleeing_toggle = !ghost_fleeing_toggle;
 }
 
 void desenhar_tela(int desenhar_fantasmas) {
@@ -655,6 +662,7 @@ void inicializar_jogo() {
     waka_toggle = 0;
     pacman_mouth_toggle = 0;
     power_pill_toggle = 0;
+    ghost_fleeing_toggle = 0;
 
     reset_positions();
     preencher_pilulas();
