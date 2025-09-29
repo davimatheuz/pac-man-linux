@@ -332,7 +332,7 @@ void atualizar_logica_fantasmas() {
 
 void ready_screen_2() {
     stop_siren();
-    desenhar_tela(1, 1, NULL);
+    desenhar_tela(1, 0, NULL);
 
     printf("\033[%d;%dH", ALTURA / 2 + 2, LARGURA / 2 - 3);
     printf("%sREADY!!", COLOR_YELLOW);
@@ -626,7 +626,16 @@ void desenhar_tela(int desenhar_pacman, int desenhar_fantasmas, const char* map_
 
     ptr += sprintf(ptr, "%s", COLOR_RESET);
     ptr += sprintf(ptr, "\033[%d;%dH", ALTURA + 2, 1);
-    ptr += sprintf(ptr, "Score: %-5d   Lives: %d", score, lives);
+    ptr += sprintf(ptr, "Score: %-5d   Lives:", score);
+
+    const char* limpeza = "          ";
+    ptr += sprintf(ptr, "%s", limpeza);
+    ptr += sprintf(ptr, "\033[%d;%dH", ALTURA + 2, 22);
+    ptr += sprintf(ptr, "%s", COLOR_YELLOW);
+    for (int i = 0; i < lives; i++) {
+        ptr += sprintf(ptr, " %c", PACMAN_CHAR);
+    }
+
 
     if (game_over) {
         ptr += sprintf(ptr, "\033[%d;%dH", ALTURA / 2 + 2, LARGURA / 2 - 4);
