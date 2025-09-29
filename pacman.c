@@ -321,7 +321,19 @@ void atualizar_logica_fantasmas() {
             ghosts[i].y = 0;
         }
     }
-}  
+}
+
+void ready_screen_2() {
+    stop_siren();
+    desenhar_tela(1, 1, NULL);
+
+    printf("\033[%d;%dH", ALTURA / 2 + 2, LARGURA / 2 - 3);
+    printf("%sREADY!!", COLOR_YELLOW);
+    fflush(stdout);
+    usleep(2000000);
+
+    start_siren("siren0_firstloop.wav", "siren0.wav");
+}
 
 void reset_positions() {
     pacman.x = 13;
@@ -336,10 +348,16 @@ void reset_positions() {
     power_pill_toggle = 0;
     pacman_mouth_toggle = 0;
     ghost_fleeing_toggle = 0;
+    static int is_first_call = 1;
 
     if (pills_captured == PILLS_PER_LEVEL) {
         pills_captured = 0;
     }
+
+    if (!is_first_call) {
+        ready_screen_2();
+    }
+    is_first_call = 0;
 
     for (int i = 0; i < NUM_GHOSTS; i++) {
         ghosts[i].x = 13;
