@@ -1,11 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <locale.h>
 #include <unistd.h>
 #include <termios.h>
 #include <sys/select.h>
 #include <string.h>
-#include <math.h>
 #include <time.h>
 #include <sys/types.h>
 #include <signal.h>
@@ -46,7 +44,9 @@
 #define COLOR_YELLOW  "\033[38;2;255;255;0m"
 #define COLOR_WHITE   "\033[37m"
 #define COLOR_RED     "\033[38;2;255;0;0m"
-#define COLOR_CYAN   "\033[38;2;0;255;255m"
+#define COLOR_PINK    "\033[38;2;255;186;255m"
+#define COLOR_CYAN    "\033[38;2;0;255;255m"
+#define COLOR_ORANGE  "\033[38;2;255;186;82m"
 #define COLOR_SALMON  "\033[38;2;255;186;173m"
 
 #define ENTER_ALT_SCREEN "\033[?1049h"
@@ -686,9 +686,9 @@ void executar_menu() {
 
     characters[0] = (MenuCharacter){-2, (ALTURA + 2) / 2, "C", COLOR_YELLOW};
     characters[1] = (MenuCharacter){-5, (ALTURA + 2) / 2, "@", COLOR_RED};
-    characters[2] = (MenuCharacter){-8, (ALTURA + 2) / 2, "@", COLOR_CYAN};
-    characters[3] = (MenuCharacter){-11, (ALTURA + 2) / 2, "@", COLOR_SALMON};
-    characters[4] = (MenuCharacter){-14, (ALTURA + 2) / 2, "@", COLOR_WHITE};
+    characters[2] = (MenuCharacter){-8, (ALTURA + 2) / 2, "@", COLOR_PINK};
+    characters[3] = (MenuCharacter){-11, (ALTURA + 2) / 2, "@", COLOR_CYAN};
+    characters[4] = (MenuCharacter){-14, (ALTURA + 2) / 2, "@", COLOR_ORANGE};
 
      while (1) {
         if (kbhit()) {
