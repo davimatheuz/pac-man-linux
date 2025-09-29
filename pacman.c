@@ -38,6 +38,9 @@
 #define FRUIT_X        13
 #define FRUIT_Y        9
 
+#define MENU_CHAR_COUNT 5
+#define MENU_DELAY      150000
+
 #define COLOR_RESET   "\033[0m"
 #define COLOR_BLUE    "\033[38;2;33;32;255m"
 #define COLOR_YELLOW  "\033[38;2;255;255;0m"
@@ -48,6 +51,13 @@
 
 #define ENTER_ALT_SCREEN "\033[?1049h"
 #define EXIT_ALT_SCREEN  "\033[?1049l"
+
+typedef struct {
+    int x;
+    int y;
+    const char* icon;
+    const char* color;
+} MenuCharacter;
 
 typedef enum {
     IN_BOX,
@@ -640,11 +650,66 @@ void desenhar_tela(int desenhar_pacman, int desenhar_fantasmas, const char* map_
     if (game_over) {
         ptr += sprintf(ptr, "\033[%d;%dH", ALTURA / 2 + 2, LARGURA / 2 - 4);
         ptr += sprintf(ptr, "%sGAME OVER", COLOR_RED);
-        ptr += sprintf(ptr, "\033[%d;%dH", ALTURA + 2, 20);
+        ptr += sprintf(ptr, "\033[%d;%dH", ALTURA + 2, 1);
     }
 
     printf("%s", buffer_tela);
     fflush(stdout);
+}
+
+void desenhar_menu(MenuCharacter characters[]) {
+    char buffer_tela[5000];
+    char *ptr = buffer_tela;
+
+    ptr += sprintf(ptr, "\033[2J\033[H");
+
+    for (int i = 0; i < MENU_CHAR_COUNT; i++) {
+        if (characters[i].x >= 0 && characters[i].x < LARGURA) {
+            ptr += sprintf(ptr, "\033[%d;%dH", characters[i].y + 1, characters[i].x + 1);
+            ptr += sprintf(ptr, "%s%s", characters[i].color, characters[i].icon);
+        }
+    }
+
+    const char* start_text = "PRESS ENTER TO START";
+    int text_x = (LARGURA - strlen(start_text)) / 2;
+    int text_y = ((ALTURA + 2) / 2) + 2;
+
+    ptr += sprintf(ptr, "\033[%d;%dH", text_y + 1, text_x + 1);
+    ptr += sprintf(ptr, "%s%s", COLOR_RESET, start_text);
+
+    printf("%s", buffer_tela);
+    fflush(stdout);
+}
+
+void executar_menu() {
+    MenuCharacter characters[MENU_CHAR_COUNT];
+
+    characters[0] = (MenuCharacter){-2, (ALTURA + 2) / 2, "C", COLOR_YELLOW};
+    characters[1] = (MenuCharacter){-5, (ALTURA + 2) / 2, "@", COLOR_RED};
+    characters[2] = (MenuCharacter){-8, (ALTURA + 2) / 2, "@", COLOR_CYAN};
+    characters[3] = (MenuCharacter){-11, (ALTURA + 2) / 2, "@", COLOR_SALMON};
+    characters[4] = (MenuCharacter){-14, (ALTURA + 2) / 2, "@", COLOR_WHITE};
+
+     while (1) {
+        if (kbhit()) {
+            char c = getch();
+            if (c == '\n' || c == '\r') {
+                break;
+            } else if (c == 'q') {
+                exit(0);
+            }
+        }
+
+        for (int i = 0; i < MENU_CHAR_COUNT; i++) {
+            characters[i].x++;
+            if (characters[i].x > LARGURA) {
+                characters[i].x = -13;
+            }
+        }
+
+        desenhar_menu(characters);
+        usleep(MENU_DELAY);
+    }
 }
 
 void play_sfx(const char* sound_file) {
@@ -697,14 +762,15 @@ void ready_screen() {
     start_siren("siren0_firstloop.wav", "siren0.wav");
 }
 
-void inicializar_jogo() {
+void configuração_inicial() {
     printf("%s", ENTER_ALT_SCREEN);
     configurar_terminal();
     printf("\033[?25l");
     atexit(restauração_final);
-
     srand(time(NULL));
+}
 
+void inicializar_jogo() {
     lives = VIDAS_INICIAIS;
     score = 0;
     pills_captured = 0;
@@ -722,6 +788,8 @@ void inicializar_jogo() {
 }
 
 int main() {
+    configuração_inicial();
+    executar_menu();
     inicializar_jogo();
     ready_screen();
     while (1) {
