@@ -208,7 +208,14 @@ void atualizar_logica_fantasmas() {
                             break;
                         }
                     }
-                    if (!fleeing_ghosts_left) {
+                    int eaten_ghosts_left = 0;
+                    for (int k = 0; k < NUM_GHOSTS; k++) {
+                        if (ghosts[k].state == EATEN) {
+                            eaten_ghosts_left = 1;
+                            break;
+                        }
+                    }
+                    if (!fleeing_ghosts_left && !eaten_ghosts_left) {
                         start_siren("siren0_firstloop.wav", "siren0.wav");
                     }
                 }
