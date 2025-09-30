@@ -466,8 +466,8 @@ void animacao_vitoria() {
     }
 
     usleep(500000);
-    reset_positions();
     preencher_pilulas();
+    reset_positions();
     start_siren("siren0_firstloop.wav", "siren0.wav");
 }
 
